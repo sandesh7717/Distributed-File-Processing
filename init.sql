@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS region_sales (
+    region VARCHAR(100) PRIMARY KEY,
+    total_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
