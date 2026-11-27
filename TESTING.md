@@ -2,7 +2,7 @@
 
 ## Passed locally
 
-- **`npm test`: 16 tests passed.** These cover streamed CSV parsing and record-aligned chunking, quoted commas/newlines, mixed line endings, invalid dates/amounts, oversized records, exact upload limits, backpressure, HTTP upload through Express, durable job creation, staged-object cleanup, ambiguous commit handling, duplicate processing, transaction rollback/retry, outbox acknowledgment order, and Redis fallback.
+- **`npm test`: 20 tests passed.** These cover streamed CSV parsing and record-aligned chunking, quoted commas/newlines, mixed line endings, invalid dates/amounts, oversized records, exact upload limits, backpressure, HTTP upload through Express, durable job creation, staged-object cleanup, ambiguous commit handling, duplicate processing, transaction rollback/retry, outbox acknowledgment order, Redis fallback, and storage initialization (create/reuse, privacy, bounded retries, authorization failures).
 - **`npm run test:browser`: 5 tests passed** using Chromium against the actual Express-served Next.js production export. Upload/progress/results, recoverable errors, mobile layout, safe filename rendering, desktop rendering, and exact large-number formatting are covered.
 - **`npm run build`: passed**, producing a Next.js static export in `out/`.
 - **`npm run format:check`: passed.** JavaScript/React/CSS source is formatted for readability.
@@ -31,3 +31,9 @@ docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integra
 `test:smoke` sends real uploads through the REST API and Kafka workers, including a multi-chunk CSV, and checks exact totals. The integration container exercises concurrent duplicate delivery against PostgreSQL, object reads from MinIO, and Redis's monotonic cache script and database fallback.
 
 For failure recovery acceptance, upload a larger dataset, kill one worker during processing, and confirm remaining workers finish with the exact expected totals. Record resource usage and timing rather than inferring scalability from the code.
+
+## CI follow-up: unavailable MinIO images
+
+After pinning the CI runner to Ubuntu 24.04, browser tests passed on GitHub. The next failure was anonymous pull denial for `minio/mc`. Direct checks also found that both exact release manifests on Quay returned 401 after the public registry token flow.
+
+The stack now builds the same MinIO release from official GitHub source, verified against SHA-256 `1a63209927b9d1fb239b2a776b7b01d1902eff19379a108f4bc7005edcc0968c`, and initializes its private bucket with the existing JavaScript S3 client. All 20 local Node tests pass. The MinIO container build and real-service checks still require confirmation from the new CI run; the first source build takes longer than an image pull.

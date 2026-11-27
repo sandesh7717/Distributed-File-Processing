@@ -99,7 +99,9 @@ services:
       timeout: 5s
       retries: 15
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -108,19 +110,12 @@ services:
     volumes:
       - minio_data:/data
   minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    build: .
+    command: ["node", "server/init-storage.mjs"]
     depends_on:
       - minio
-    environment:
-      MINIO_USER: ${MINIO_USER:-dfsadmin}
-      MINIO_PASSWORD: ${MINIO_PASSWORD:?Set MINIO_PASSWORD in .env}
-    entrypoint:
-      - /bin/sh
-      - -ec
-      - |
-        until mc alias set local http://minio:9000 "$$MINIO_USER" "$$MINIO_PASSWORD"; do sleep 2; done
-        mc mb --ignore-existing local/uploads
-        mc anonymous set none local/uploads
+    environment: *app-env
+
 volumes:
   postgres_data:
   minio_data:

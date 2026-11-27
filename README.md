@@ -1,6 +1,6 @@
 # Flow — Distributed File Processing
 
-A JavaScript application with a **Next.js frontend**, **Node.js/Express REST API**, and **Node.js Kafka workers**. It validates and streams sales CSV uploads into MinIO, processes chunks asynchronously, and displays regional totals. There is no Go source or Go build dependency in this version.
+A JavaScript application with a **Next.js frontend**, **Node.js/Express REST API**, and **Node.js Kafka workers**. It validates and streams sales CSV uploads into MinIO, processes chunks asynchronously, and displays regional totals. The application has no Go source or Go build dependency. Docker uses a compiler internally to build the third-party MinIO server from its official release source; no local Go installation is needed.
 
 ## Start the complete application
 
@@ -20,6 +20,8 @@ docker compose logs -f api worker
 docker compose up -d --scale worker=3
 docker compose down
 ```
+
+MinIO is built from its official release source with a verified SHA-256 checksum because the previous MinIO registry images are not anonymously pullable. The first Docker build takes longer while compiling storage. A one-shot Node.js service creates the uploads bucket and removes anonymous access policies; it does not require `minio/mc`.
 
 Only the API port is exposed, on loopback by default. Named volumes persist PostgreSQL, MinIO, and Kafka data. Redis is a disposable cache. `docker compose down` preserves data; `down -v` deletes it.
 

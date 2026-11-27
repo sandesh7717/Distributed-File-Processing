@@ -5,6 +5,8 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
+  CreateBucketCommand,
+  DeleteBucketPolicyCommand,
 } from '@aws-sdk/client-s3';
 import { createClient } from 'redis';
 import { Kafka, logLevel } from 'kafkajs';
@@ -23,6 +25,28 @@ export function createClients() {
   db.on('error', (error) =>
     console.error('Idle database connection:', error.message),
   );
+  const objects = createObjectStore();
+  const redis = createClient({
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+    disableOfflineQueue: true,
+    socket: {
+      connectTimeout: 1000,
+      reconnectStrategy: (retries) => Math.min(1000 + retries * 200, 5000),
+    },
+  });
+  redis.on('error', () => {}); // Redis is optional; PostgreSQL remains authoritative.
+  redis.connect().catch(() => {});
+  const kafka = new Kafka({
+    clientId: 'flow-js',
+    brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
+    logLevel: logLevel.WARN,
+    retry: { retries: 5 },
+  });
+  return { db, objects, redis, kafka };
+}
+
+// Shared by the API, workers and one-shot storage initialization.
+export function createObjectStore() {
   const endpoint = new URL(
     `${process.env.MINIO_SECURE === 'true' ? 'https' : 'http'}://${process.env.MINIO_ENDPOINT || 'localhost:9000'}`,
   );
@@ -72,25 +96,27 @@ export function createClients() {
         throw error;
       }
     },
+    async createBucket(Bucket) {
+      try {
+        await s3.send(new CreateBucketCommand({ Bucket }), {
+          abortSignal: AbortSignal.timeout(5000),
+        });
+      } catch (error) {
+        if (error.name !== 'BucketAlreadyOwnedByYou') throw error;
+      }
+    },
+    async makePrivate(Bucket) {
+      try {
+        await s3.send(new DeleteBucketPolicyCommand({ Bucket }), {
+          abortSignal: AbortSignal.timeout(5000),
+        });
+      } catch (error) {
+        if (error.name !== 'NoSuchBucketPolicy') throw error;
+      }
+    },
     close() {
       s3.destroy();
     },
   };
-  const redis = createClient({
-    url: process.env.REDIS_URL || 'redis://localhost:6379',
-    disableOfflineQueue: true,
-    socket: {
-      connectTimeout: 1000,
-      reconnectStrategy: (retries) => Math.min(1000 + retries * 200, 5000),
-    },
-  });
-  redis.on('error', () => {}); // Redis is optional; PostgreSQL remains authoritative.
-  redis.connect().catch(() => {});
-  const kafka = new Kafka({
-    clientId: 'flow-js',
-    brokers: (process.env.KAFKA_BROKERS || 'localhost:9092').split(','),
-    logLevel: logLevel.WARN,
-    retry: { retries: 5 },
-  });
-  return { db, objects, redis, kafka };
+  return objects;
 }

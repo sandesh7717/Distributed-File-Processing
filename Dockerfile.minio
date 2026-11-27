@@ -1,0 +1,23 @@
+# Build the same official release without relying on removed/private registry images.
+# This compiler is only for the third-party MinIO server; application code is JavaScript.
+FROM golang:1.24.2-alpine AS build
+RUN apk add --no-cache ca-certificates curl
+WORKDIR /src
+ARG MINIO_RELEASE=RELEASE.2025-04-22T22-12-26Z
+ARG MINIO_SOURCE_SHA256=1a63209927b9d1fb239b2a776b7b01d1902eff19379a108f4bc7005edcc0968c
+RUN curl --fail --location --retry 3 \
+      "https://codeload.github.com/minio/minio/tar.gz/refs/tags/${MINIO_RELEASE}" -o /tmp/minio.tar.gz \
+    && echo "${MINIO_SOURCE_SHA256}  /tmp/minio.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/minio.tar.gz --strip-components=1 -C /src
+RUN go mod download
+# Limit compiler parallelism to fit standard hosted CI runners.
+RUN CGO_ENABLED=0 GOMEMLIMIT=2GiB go build -p 2 -trimpath -ldflags="-s -w" -o /out/minio .
+
+FROM alpine:3.23
+RUN apk add --no-cache ca-certificates && mkdir -p /data /licenses
+COPY --from=build /out/minio /usr/local/bin/minio
+COPY --from=build /src/LICENSE /licenses/MINIO-LICENSE
+EXPOSE 9000 9001
+VOLUME ["/data"]
+ENTRYPOINT ["minio"]
+CMD ["server", "/data", "--console-address", ":9001"]
