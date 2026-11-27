@@ -1,0 +1,31 @@
+name: Test JavaScript application
+on: [push, pull_request]
+jobs:
+  test:
+    # Playwright 1.58.2 supports Ubuntu 24.04, not Ubuntu 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable CI environment
+        run: cp .env.example .env
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - name: Start integration stack
+        id: compose
+        run: docker compose up -d --build --scale worker=3 --wait --wait-timeout 240
+      - run: npm run test:smoke
+      - run: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration
+      - name: Show integration logs on failure
+        if: failure() && (steps.compose.outcome == 'success' || steps.compose.outcome == 'failure')
+        run: docker compose logs --tail=100
+      - name: Remove disposable integration stack
+        if: always() && (steps.compose.outcome == 'success' || steps.compose.outcome == 'failure' || steps.compose.outcome == 'cancelled')
+        run: docker compose down -v

@@ -1,28 +1,20 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# Local dependencies and generated Next.js output
+node_modules/
+.next/
+out/
 
-# Test binary, built with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# OS specific files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Docker
+# Secrets and local configuration
+.env
+.env.local
+.env.*.local
 .docker/
 docker-compose.override.yml
+
+# Generated verification artifacts and large datasets
+playwright-report/
+test-results/
+benchmarks/
+*.csv.metrics.json
+
+# OS files
+.DS_Store
