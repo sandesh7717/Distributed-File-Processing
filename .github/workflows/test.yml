@@ -1,0 +1,23 @@
+name: Test JavaScript application
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: cp .env.example .env && docker compose up -d --build --scale worker=3 --wait --wait-timeout 240
+      - run: npm run test:smoke
+      - run: docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm integration
+      - if: failure()
+        run: docker compose logs --tail=100
+      - if: always()
+        run: docker compose down -v

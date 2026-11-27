@@ -1,0 +1,36 @@
+{
+  "name": "flow-distributed-file-processing",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build --webpack",
+    "start": "node --env-file-if-exists=.env server/index.mjs",
+    "worker": "node --env-file-if-exists=.env server/worker.mjs",
+    "test": "node --test tests/unit/*.test.mjs",
+    "test:browser": "playwright test",
+    "test:smoke": "node tests/smoke.mjs",
+    "generate:csv": "node scripts/generate-csv.mjs",
+    "format": "prettier --write app server scripts tests next.config.mjs playwright.config.js",
+    "format:check": "prettier --check app server scripts tests next.config.mjs playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "prettier": "3.10.1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1178.0",
+    "busboy": "1.6.0",
+    "csv-parse": "7.0.3",
+    "express": "5.3.0",
+    "kafkajs": "2.2.4",
+    "next": "16.4.6",
+    "pg": "8.23.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "redis": "6.4.0"
+  },
+  "version": "2.0.0",
+  "engines": {
+    "node": ">=22.13"
+  }
+}
